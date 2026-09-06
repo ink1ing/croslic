@@ -10,7 +10,10 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "MacEfficiencyHub",
-            path: "Sources/MacEfficiencyHub"
+            path: "Sources/MacEfficiencyHub",
+            linkerSettings: [
+                .linkedFramework("SafariServices")
+            ]
         ),
         .testTarget(
             name: "MacEfficiencyHubTests",

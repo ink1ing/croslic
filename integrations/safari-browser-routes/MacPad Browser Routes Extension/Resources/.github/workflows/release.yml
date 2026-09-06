@@ -1,0 +1,36 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - v*
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build zip
+        run: |
+          mkdir -p dist
+          ver=$(node -p "require('./manifest.json').version")
+          zip -r "dist/laziest-browser-v${ver}.zip" \
+            manifest.json \
+            background.js \
+            content.js \
+            options.html \
+            options.css \
+            options.js \
+            README.md \
+            LICENSE
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+          generate_release_notes: true

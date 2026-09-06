@@ -1,6 +1,7 @@
 import AppKit
 import Foundation
 import Network
+import SafariServices
 import SwiftUI
 
 @main
@@ -113,6 +114,35 @@ final class HubModel: ObservableObject {
         let folder = AppPaths.component("laziest-browser")
         NSWorkspace.shared.activateFileViewerSelecting([folder])
         lastAction = "已打开浏览器快捷路由扩展目录"
+    }
+
+    func installSafariBrowserRoutes() {
+        guard let hostApp = AppPaths.safariBrowserRoutesApp() else {
+            lastAction = "当前运行版本没有内置 Safari 宿主，请先运行打包脚本生成发行版"
+            return
+        }
+
+        let extensionID = AppPaths.safariExtensionBundleIdentifier
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.activates = true
+        NSWorkspace.shared.openApplication(at: hostApp, configuration: configuration) { [weak self] _, error in
+            if let error {
+                Task { @MainActor in
+                    self?.lastAction = "启动 Safari 扩展宿主失败：\(error.localizedDescription)"
+                }
+                return
+            }
+
+            SFSafariApplication.showPreferencesForExtension(withIdentifier: extensionID) { preferenceError in
+                Task { @MainActor in
+                    if let preferenceError {
+                        self?.lastAction = "已启动 Safari 宿主，但无法打开扩展设置：\(preferenceError.localizedDescription)"
+                    } else {
+                        self?.lastAction = "已打开 Safari 扩展设置，请启用 MacPad Browser Routes"
+                    }
+                }
+            }
+        }
     }
 
     func openChromeExtensions() {
@@ -505,6 +535,8 @@ final class HubModel: ObservableObject {
 }
 
 enum AppPaths {
+    static let safariExtensionBundleIdentifier = "com.ink1ing.macefficiencyhub.browserroutes.Extension"
+
     static var root: URL {
         let manager = FileManager.default
         if let resources = Bundle.main.resourceURL,
@@ -532,6 +564,13 @@ enum AppPaths {
         } catch {
             return developmentPath
         }
+    }
+
+    static func safariBrowserRoutesApp() -> URL? {
+        let candidate = root
+            .appendingPathComponent("components", isDirectory: true)
+            .appendingPathComponent("MacPad Browser Routes.app", isDirectory: true)
+        return FileManager.default.fileExists(atPath: candidate.path) ? candidate : nil
     }
 }
 
@@ -1049,6 +1088,12 @@ struct BrowserRoutesView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             HStack(spacing: 8) {
+                Button {
+                    model.installSafariBrowserRoutes()
+                } label: {
+                    Label("启用并安装 Safari", systemImage: "safari")
+                }
+                .help("启动内置 Safari 宿主并打开扩展设置")
                 Button("打开扩展目录") { model.openBrowserRoutesFolder() }
                 Button("打开 Chrome 扩展") { model.openChromeExtensions() }
                 Button("导出规则") { model.exportBrowserRoutes(store.browserRoutes) }
@@ -1058,6 +1103,9 @@ struct BrowserRoutesView: View {
                     status = "已恢复 15 条内置规则"
                 }
             }
+            Text("Safari 需要在系统扩展设置中手动确认启用；Chrome 仍可按下方目录方式加载。")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
             Text("在 Chrome 扩展页开启开发者模式，选择“加载已解压的扩展程序”，再选上方打开的文件夹。面板改动后导出 JSON，并在扩展设置中导入即可同步。")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
