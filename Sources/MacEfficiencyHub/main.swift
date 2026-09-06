@@ -109,6 +109,38 @@ final class HubModel: ObservableObject {
         lastAction = "已打开 yt-dlp Releases 页面"
     }
 
+    func openBrowserRoutesFolder() {
+        let folder = AppPaths.component("laziest-browser")
+        NSWorkspace.shared.activateFileViewerSelecting([folder])
+        lastAction = "已打开浏览器快捷路由扩展目录"
+    }
+
+    func openChromeExtensions() {
+        runUtility("/usr/bin/open", arguments: ["-a", "Google Chrome", "chrome://extensions"], success: "已尝试打开 Chrome 扩展管理")
+    }
+
+    func exportBrowserRoutes(_ routes: [BrowserRoute]) {
+        guard !routes.isEmpty else {
+            lastAction = "没有可导出的浏览器规则"
+            return
+        }
+        let export = BrowserRouteExport(
+            version: 1,
+            mappings: routes.map { BrowserRouteExport.Mapping(prefix: $0.prefix, label: $0.label, urlTemplate: $0.urlTemplate) }
+        )
+        do {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            let desktop = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Desktop", isDirectory: true)
+            let target = desktop.appendingPathComponent("MacPad-browser-routes.json")
+            try encoder.encode(export).write(to: target, options: .atomic)
+            NSWorkspace.shared.activateFileViewerSelecting([target])
+            lastAction = "已导出 \(routes.count) 条浏览器规则到桌面"
+        } catch {
+            lastAction = "导出浏览器规则失败：\(error.localizedDescription)"
+        }
+    }
+
     func downloadMedia(url: String, format: YTDLPFormat) {
         guard URL(string: url)?.scheme != nil else { lastAction = "请输入有效视频网址"; return }
         guard ytdlpPath != nil else { lastAction = "未找到 yt-dlp，请点击配置"; return }
@@ -505,6 +537,16 @@ enum AppPaths {
 
 struct NetworkSnapshot { let status: String; let detail: String; let latency: Int? }
 private struct LiveRate: Decodable { let rate: Decimal }
+private struct BrowserRouteExport: Encodable {
+    struct Mapping: Encodable {
+        let prefix: String
+        let label: String
+        let urlTemplate: String
+    }
+
+    let version: Int
+    let mappings: [Mapping]
+}
 
 private final class NetworkProbeResults: @unchecked Sendable {
     private var values: [(Bool, Int)]
@@ -616,6 +658,10 @@ struct DashboardView: View {
 
                 GroupBox("快捷提示词") {
                     PromptsView(model: model, store: store, promptTitle: $promptTitle, promptBody: $promptBody)
+                }
+
+                GroupBox("浏览器快捷路由") {
+                    BrowserRoutesView(model: model, store: store)
                 }
 
                 GroupBox("命令与 Tab 快捷键") {
@@ -985,6 +1031,110 @@ struct PromptsView: View {
         store.save()
         promptTitle = ""
         promptBody = ""
+    }
+}
+
+struct BrowserRoutesView: View {
+    @ObservedObject var model: HubModel
+    @ObservedObject var store: UserStore
+    @State private var group = "网页"
+    @State private var label = ""
+    @State private var prefix = ""
+    @State private var urlTemplate = ""
+    @State private var status = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Chrome 地址栏输入“前缀 + 内容”即可跳转。扩展首次加载已预置 AI、网页与 Web3 的 15 条规则，并保留“今天什么新闻”直达 ChatGPT。")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            HStack(spacing: 8) {
+                Button("打开扩展目录") { model.openBrowserRoutesFolder() }
+                Button("打开 Chrome 扩展") { model.openChromeExtensions() }
+                Button("导出规则") { model.exportBrowserRoutes(store.browserRoutes) }
+                Button("恢复内置规则") {
+                    store.browserRoutes = BrowserRouteDefaults.routes
+                    store.save()
+                    status = "已恢复 15 条内置规则"
+                }
+            }
+            Text("在 Chrome 扩展页开启开发者模式，选择“加载已解压的扩展程序”，再选上方打开的文件夹。面板改动后导出 JSON，并在扩展设置中导入即可同步。")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            DisclosureGroup("管理规则（\(store.browserRoutes.count) 条）") {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 6) {
+                        TextField("分组", text: $group).frame(width: 54)
+                        TextField("名称", text: $label).frame(width: 78)
+                        TextField("前缀", text: $prefix).frame(width: 52)
+                        TextField("https://...%s", text: $urlTemplate)
+                        Button { addRoute() } label: { Image(systemName: "plus") }
+                            .disabled(!canSave(label: label, prefix: prefix, template: urlTemplate))
+                    }
+                    ForEach($store.browserRoutes) { $route in
+                        HStack(spacing: 6) {
+                            TextField("分组", text: $route.group).frame(width: 54)
+                            TextField("名称", text: $route.label).frame(width: 78)
+                            TextField("前缀", text: $route.prefix).frame(width: 52)
+                            TextField("https://...%s", text: $route.urlTemplate)
+                            Button("保存") { saveRoutes() }
+                                .disabled(!canSave(label: route.label, prefix: route.prefix, template: route.urlTemplate))
+                            Button(role: .destructive) {
+                                store.browserRoutes.removeAll { $0.id == route.id }
+                                store.save()
+                            } label: { Image(systemName: "trash") }
+                            .help("删除")
+                        }
+                    }
+                    if !status.isEmpty {
+                        Text(status).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.top, 4)
+            }
+        }
+    }
+
+    private func canSave(label: String, prefix: String, template: String) -> Bool {
+        !label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !prefix.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && template.hasPrefix("https://")
+            && template.contains("%s")
+    }
+
+    private func addRoute() {
+        guard canSave(label: label, prefix: prefix, template: urlTemplate) else { return }
+        let normalizedPrefix = prefix.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !store.browserRoutes.contains(where: { $0.prefix == normalizedPrefix }) else {
+            status = "前缀 \(normalizedPrefix) 已存在"
+            return
+        }
+        store.browserRoutes.append(BrowserRoute(
+            group: group.trimmingCharacters(in: .whitespacesAndNewlines),
+            label: label.trimmingCharacters(in: .whitespacesAndNewlines),
+            prefix: normalizedPrefix,
+            urlTemplate: urlTemplate.trimmingCharacters(in: .whitespacesAndNewlines)
+        ))
+        store.save()
+        group = "网页"
+        label = ""
+        prefix = ""
+        urlTemplate = ""
+        status = "已新增浏览器规则"
+    }
+
+    private func saveRoutes() {
+        let prefixes = store.browserRoutes.map { $0.prefix.trimmingCharacters(in: .whitespacesAndNewlines) }
+        guard Set(prefixes).count == prefixes.count else {
+            status = "前缀不能重复"
+            return
+        }
+        guard store.browserRoutes.allSatisfy({ canSave(label: $0.label, prefix: $0.prefix, template: $0.urlTemplate) }) else {
+            status = "每条规则都需要名称、前缀和带 %s 的 HTTPS 地址"
+            return
+        }
+        store.save()
+        status = "浏览器规则已保存"
     }
 }
 

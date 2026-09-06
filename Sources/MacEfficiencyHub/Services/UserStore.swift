@@ -5,6 +5,33 @@ struct PromptItem: Codable, Identifiable, Sendable { var id = UUID(); var title:
 struct PinnedSite: Codable, Identifiable, Sendable { var id = UUID(); var label: String; var url: String }
 struct LabeledPreset: Codable, Identifiable, Sendable { var id = UUID(); var label: String; var note: String; var prompt: String }
 struct SystemPromptSettings: Codable, Sendable { var codex = ""; var claude = "" }
+struct BrowserRoute: Codable, Identifiable, Sendable {
+    var id = UUID()
+    var group: String
+    var label: String
+    var prefix: String
+    var urlTemplate: String
+}
+
+enum BrowserRouteDefaults {
+    static let routes: [BrowserRoute] = [
+        BrowserRoute(group: "AI", label: "ChatGPT", prefix: "，", urlTemplate: "https://chatgpt.com/?q=%s&hints=search"),
+        BrowserRoute(group: "AI", label: "ChatGPT", prefix: ",", urlTemplate: "https://chatgpt.com/?q=%s&hints=search"),
+        BrowserRoute(group: "AI", label: "FuClaude", prefix: "。", urlTemplate: "https://demo.fuclaude.com/new?q=%s"),
+        BrowserRoute(group: "AI", label: "FuClaude", prefix: ".", urlTemplate: "https://demo.fuclaude.com/new?q=%s"),
+        BrowserRoute(group: "网页", label: "Bing", prefix: "//", urlTemplate: "https://www.bing.com/search?q=%s"),
+        BrowserRoute(group: "网页", label: "GitHub", prefix: "gh", urlTemplate: "https://github.com/search?q=%s"),
+        BrowserRoute(group: "网页", label: "Wikipedia 中文", prefix: "wk", urlTemplate: "https://zh.wikipedia.org/w/index.php?search=%s"),
+        BrowserRoute(group: "网页", label: "Bilibili", prefix: "bl", urlTemplate: "https://search.bilibili.com/all?keyword=%s"),
+        BrowserRoute(group: "网页", label: "X", prefix: "x", urlTemplate: "https://x.com/search?q=%s"),
+        BrowserRoute(group: "网页", label: "Z-Library", prefix: "zl", urlTemplate: "https://z-library.ec/s/?q=%s"),
+        BrowserRoute(group: "网页", label: "DuckDuckGo", prefix: "ddg", urlTemplate: "https://duckduckgo.com/?q=%s"),
+        BrowserRoute(group: "Web3", label: "Binance Spot", prefix: "bn", urlTemplate: "https://www.binance.com/zh-CN/trade/%s_USDT"),
+        BrowserRoute(group: "Web3", label: "Binance Futures", prefix: "bf", urlTemplate: "https://www.binance.com/zh-CN/futures/%s_USDT"),
+        BrowserRoute(group: "Web3", label: "Binance Web3", prefix: "bm", urlTemplate: "https://web3.binance.com/zh-CN/token/bsc/%s"),
+        BrowserRoute(group: "Web3", label: "Coinglass", prefix: "cg", urlTemplate: "https://www.coinglass.com/zh/coin/%s")
+    ]
+}
 enum TabShortcutTarget: String, CaseIterable, Identifiable {
     case panel
     case codex
@@ -103,6 +130,7 @@ final class UserStore: ObservableObject {
     @Published var calendarPresets: [LabeledPreset] = []
     @Published var assistantPresets: [LabeledPreset] = []
     @Published var systemPrompts = SystemPromptSettings()
+    @Published var browserRoutes: [BrowserRoute] = []
     @Published var settings = HubSettings()
     private let directory: URL
     init() {
@@ -114,6 +142,7 @@ final class UserStore: ObservableObject {
         calendarPresets = load([LabeledPreset].self, name: "calendar-presets.json") ?? []
         assistantPresets = load([LabeledPreset].self, name: "assistant-presets.json") ?? []
         systemPrompts = load(SystemPromptSettings.self, name: "system-prompts.json") ?? SystemPromptSettings()
+        browserRoutes = load([BrowserRoute].self, name: "browser-routes.json") ?? BrowserRouteDefaults.routes
         settings = load(HubSettings.self, name: "settings.json") ?? HubSettings()
     }
     func save() {
@@ -123,6 +152,7 @@ final class UserStore: ObservableObject {
         save(calendarPresets, name: "calendar-presets.json")
         save(assistantPresets, name: "assistant-presets.json")
         save(systemPrompts, name: "system-prompts.json")
+        save(browserRoutes, name: "browser-routes.json")
         save(settings, name: "settings.json")
     }
     private func load<T: Decodable>(_ type: T.Type, name: String) -> T? { guard let data = try? Data(contentsOf: directory.appendingPathComponent(name)) else { return nil }; return try? JSONDecoder().decode(type, from: data) }

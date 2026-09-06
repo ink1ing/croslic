@@ -7,6 +7,7 @@ components/matter-gateway/node_modules/
 components/matter-gateway/.matter-storage/
 components/matter-gateway/devices.json
 components/matter-gateway/settings.json
+components/laziest-browser/dist/
 outputs/
 work/
 .DS_Store

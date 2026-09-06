@@ -35,6 +35,14 @@ final class MacEfficiencyHubTests: XCTestCase {
         XCTAssertFalse(UpdateService.versionIsNewer("preview", than: "1.0.0"))
     }
 
+    func testBrowserRouteDefaultsContainTheCompletePresetSet() {
+        let routes = BrowserRouteDefaults.routes
+        XCTAssertEqual(routes.count, 15)
+        XCTAssertEqual(Set(routes.map(\.prefix)).count, 15)
+        XCTAssertTrue(routes.contains { $0.prefix == "gh" && $0.label == "GitHub" })
+        XCTAssertTrue(routes.contains { $0.prefix == "cg" && $0.label == "Coinglass" })
+    }
+
     @MainActor
     func testDiagnosticMarkdownExportsToPDF() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("MacEfficiencyHub-PDF-Test-\(UUID().uuidString)", isDirectory: true)

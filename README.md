@@ -8,6 +8,7 @@
 - 标签化“新启日历”提示词，和网络检测一起保存、复制与管理。
 - 本机 `yt-dlp` 高质量 MP3 / MP4 下载到 `~/Downloads/MacEfficiencyHub`；缺失时可直接打开官方 Releases 配置。
 - Tab + 字母全局快捷动作、可编辑的绝对路径命令、提示词保存与复制。
+- 浏览器快捷路由：内置 Chrome 扩展与全部 15 条 AI、网页、Web3 前缀规则；可在 MacPad 中改名、增删、恢复默认并导出 JSON。扩展保留“今天什么新闻”直达 ChatGPT 的特殊入口。
 - 货币换算：Frankfurter 免费实时汇率，离线时回退到内置汇率。
 - 单一内存占用仪表。
 - 一键 Mac 诊断：完成后将 PDF 报告保存到桌面，并优先在 Safari 中预览。
@@ -53,3 +54,4 @@ zsh Scripts/build-app.sh
 - 自定义命令只接受绝对路径，参数以数组执行，不经 shell 拼接。
 - Matter 远程访问还要求用户已配置 Cloudflare Tunnel 与 Access；没有 `cloudflared` 或配置文件时应用只报告缺失条件，不会开放端口。
 - CLI 配置预览会遮蔽包含 `key`、`token`、`secret`、`password` 或 `authorization` 的值；保存前会在原配置同目录创建备份。
+- 浏览器扩展需要在 Chrome 的 `chrome://extensions` 中由用户开启开发者模式后选择“加载已解压的扩展程序”。这是 Chrome 的安全限制；MacPad 会直接打开扩展目录，规则导出后可在扩展设置中导入。

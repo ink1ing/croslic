@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MacPad Browser Routes</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <div class="topbar">
+      <a id="repo-link" class="repo" href="https://github.com/silasxbt/macpad" target="_blank" rel="noopener noreferrer">MacPad GitHub</a>
+      <div id="thanks" class="thanks">MacPad browser shortcuts</div>
+      <button id="lang-toggle" class="btn small" type="button">中文</button>
+    </div>
+
+    <main class="container">
+      <header>
+        <h1 id="title">MacPad Browser Routes</h1>
+        <p id="subtitle">MacPad browser routes are ready to use. Type a prefix plus your query; use %s in a custom URL template.</p>
+      </header>
+
+      <section class="actions">
+        <button id="restore" class="btn" type="button">Restore Defaults</button>
+        <button id="import-file-btn" class="btn" type="button">Import File</button>
+        <button class="btn preset" data-preset="ai" type="button">Import AI</button>
+        <button class="btn preset" data-preset="browser" type="button">Import Browser</button>
+        <button class="btn preset" data-preset="web3" type="button">Import Web3</button>
+        <button id="export-json" class="btn" type="button">Export</button>
+        <input id="import-file" type="file" accept="application/json" hidden />
+      </section>
+
+      <section>
+        <h2 id="current-title">Current Mappings</h2>
+        <ul id="list" class="list"></ul>
+        <p id="empty-hint" class="empty-hint" hidden>No shortcuts yet. Import a preset or add one.</p>
+      </section>
+
+      <section>
+        <h2 id="add-title">Add New Mapping</h2>
+        <form id="add-form" class="add-form">
+          <label>
+            <span id="prefix-label">Prefix</span>
+            <input id="prefix" name="prefix" maxlength="16" placeholder="," required />
+          </label>
+          <label class="wide">
+            <span id="url-label">Target URL template</span>
+            <input id="url" name="url" placeholder="https://example.com/search?q=%s" required />
+          </label>
+          <button id="add-btn" class="btn" type="submit">Add</button>
+        </form>
+      </section>
+
+      <section class="guide">
+        <h2 id="guide-title">Quick Start</h2>
+        <p id="guide-copy">Need a refresher? Reopen the onboarding guide for prefix examples, drag tips, and pro shortcuts.</p>
+        <button id="open-guide" class="btn ghost" type="button">Open Quick Start Guide</button>
+      </section>
+    </main>
+
+    <template id="item-template">
+      <li class="item">
+        <div class="pill prefix" title="Prefix"></div>
+        <div class="url" title="URL template"></div>
+        <div class="actions-inline">
+          <button class="btn" data-action="edit" title="Edit">Edit</button>
+          <button class="btn danger" data-action="delete">Delete</button>
+        </div>
+      </li>
+    </template>
+
+    <script src="options.js" defer></script>
+  </body>
+  </html>

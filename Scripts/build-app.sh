@@ -22,6 +22,9 @@ cp "$project_root/Distribution/Info.plist" "$app_path/Contents/Info.plist"
 ditto "$project_root/components" "$app_path/Contents/Resources/components"
 # Tab shortcuts are implemented directly in the app, so the duplicate component is not distributed.
 rm -rf "$app_path/Contents/Resources/components/protab"
+# Keep the bundled browser extension loadable while excluding repository-only metadata.
+rm -rf "$app_path/Contents/Resources/components/laziest-browser/.github"
+rm -f "$app_path/Contents/Resources/components/laziest-browser/.DS_Store"
 # Matter dependencies are installed into Application Support on first use,
 # keeping the distributed archive small and reproducible.
 rm -rf "$app_path/Contents/Resources/components/matter-gateway/node_modules"
