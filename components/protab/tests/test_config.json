@@ -1,0 +1,29 @@
+{
+  "app": {
+    "name": "ProTab Test",
+    "version": "1.0.0",
+    "debug": true
+  },
+  "paths": {
+    "work_directory": "/tmp/protab_test",
+    "scripts_directory": "/tmp/protab_test/shortcuts",
+    "config_file": "/tmp/protab_test/test_config.json"
+  },
+  "keyboard": {
+    "wait_timeout_ms": 500,
+    "shortcuts": {
+      "a": "test_auth.sh",
+      "b": "test_build.sh",
+      "t": "test_terminal.sh"
+    }
+  },
+  "services": {
+    "api_endpoint": "http://localhost:8080",
+    "timeout_seconds": 5
+  },
+  "ui": {
+    "app_name": "ProTab Test",
+    "show_notifications": false,
+    "color_theme": "dark"
+  }
+}

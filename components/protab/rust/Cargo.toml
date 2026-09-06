@@ -1,0 +1,12 @@
+[package]
+name = "freeup_ram_rust"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "freeup_ram_rust"
+path = "src/main.rs"
+
+[dependencies]
+libc = "0.2"
+anyhow = "1.0"

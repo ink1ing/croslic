@@ -1,0 +1,12 @@
+.build/
+Distribution/build/
+**/.build/
+**/.swiftpm/
+**/target/
+components/matter-gateway/node_modules/
+components/matter-gateway/.matter-storage/
+components/matter-gateway/devices.json
+components/matter-gateway/settings.json
+outputs/
+work/
+.DS_Store

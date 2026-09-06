@@ -1,0 +1,93 @@
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Swift build artifacts
+*.swiftmodule
+*.swiftdoc
+*.dSYM
+build/
+DerivedData/
+
+# ProTab specific build files
+tab_monitor
+*.o
+*.dylib
+
+# Rust build artifacts
+rust/target/
+# Keep Cargo.lock for reproducible builds in rust/
+
+# Configuration files with sensitive data
+config.json
+*.bak
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# Test artifacts
+tests/build/
+tests/test_results_*.log
+tests/test_summary.txt
+tests/coverage_report.txt
+
+# Node modules (if any)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Cloudflare/Wrangler
+.wrangler/
+*.sqlite*
+
+# IDE
+.vscode/
+.idea/
+*.xcodeproj/
+*.xcworkspace/
+
+# Logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Release packages
+release/
+*.tar.gz
+*.zip
+
+# Local environment files
+.env
+.env.local
+.env.*.local
+
+# Editor backup files
+*~
+*.sw[mnpcod]
+*.swp
+*.swo
+
+# OS generated files
+*.pid
+.fuse_hidden*
+
+# Temporary directories
+tmp/
+temp/
+
+# Added by cargo

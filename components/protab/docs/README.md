@@ -1,0 +1,271 @@
+# ProTab - macOS Global Shortcut System
+
+ProTab 是一个强大的 macOS 全局快捷键系统，通过 Tab + 字母键快速执行各种复杂指令，提升工作效率。
+
+## 🚀 功能特性
+
+- **快捷键触发**: Tab + 字母键的组合触发各种复杂指令，无冲突，好记忆，全局生效
+- **高度可配置**: 支持自定义快捷键和脚本,小白也可用claude code轻松定制
+- **Unix哲学**: 大小约200KB，内存开销约1MB，集成功能15+
+- **内存安全**: Rust 实现高效内存清理，0成本抽象，成熟错误处理
+- **全面测试**: 95%+ 测试覆盖率，尽最大可能确保稳定性
+- **自动启动**: 支持开机自启动配置，无感融入工作流
+
+## 📋 系统要求
+
+- macOS 10.14+ (Mojave 或更高版本)
+- Xcode Command Line Tools (用于编译)
+- Rust 1.70+ (用于内存清理器编译)
+- 辅助功能权限
+
+## 🔧 安装方法
+
+### 1. 克隆仓库
+```bash
+git clone https://github.com/your-username/ProTab.git
+cd ProTab
+```
+
+### 2. 编译程序
+```bash
+# 使用编译脚本
+./build.sh
+
+# 或者使用 Makefile
+make build
+```
+
+### 3. 安装到系统
+```bash
+make install
+```
+
+## 🎯 使用方法
+
+### 基本操作流程
+
+1. **启动程序**: `./protab.command start`
+2. **授权访问**: 首次运行需要在「系统偏好设置 > 安全性与隐私 > 辅助功能」中授权
+3. **使用快捷键**: 按住 Tab 键，然后按字母键触发对应功能
+
+### 默认快捷键
+
+| 快捷键 | 功能 | 脚本文件 |
+|--------|------|----------|
+| Tab + t | 新建终端 | `new_terminal.sh` |
+| Tab + c | 新建 Claude Code | `new_claude_code.sh` |
+| Tab + p | 新建私密标签页 | `new_private_tab.sh` |
+| Tab + s | 截图工具 | `screenshot.sh` |
+| Tab + v | 录屏工具 | `record.sh` |
+| Tab + r | 清理内存 | `clean_ram.sh` |
+| Tab + n | 网络测试 | `network_test.sh` |
+| Tab + q | 强制退出 | `open_force_quit.sh` |
+| Tab + x | 切换 VPN | `toggle_vpn.sh` |
+
+### 主控制命令
+
+```bash
+./protab.command [命令] [选项]
+
+命令:
+  start         启动 ProTab 监听器
+  stop          停止 ProTab 进程
+  restart       重启 ProTab
+  status        显示运行状态
+  config        显示当前配置
+  build         编译 Swift 程序
+  test          运行测试
+  help          显示帮助信息
+```
+
+## ⚙️ 配置管理
+
+### 配置文件位置
+
+ProTab 按以下顺序查找配置文件：
+1. `PROTAB_CONFIG` 环境变量指定的路径
+2. `./config.json`（项目目录）
+3. `~/.protab/config.json`（用户目录）
+4. `~/.config/protab/config.json`（XDG 标准）
+
+### 配置文件结构
+
+```json
+{
+  "app": {
+    "name": "ProTab",
+    "version": "1.0.0",
+    "debug": false
+  },
+  "paths": {
+    "work_directory": "${HOME}/Desktop/ProTab",
+    "scripts_directory": "${HOME}/Desktop/ProTab/shortcuts"
+  },
+  "keyboard": {
+    "wait_timeout_ms": 1000,
+    "trigger_key": "tab",
+    "shortcuts": {
+      "t": "new_terminal.sh",
+      "c": "new_claude_code.sh"
+    }
+  },
+  "services": {
+    "api_endpoint": "http://localhost:8080",
+    "timeout_seconds": 10
+  }
+}
+```
+
+### 自定义快捷键
+
+1. 编辑配置文件中的 `keyboard.shortcuts` 部分
+2. 添加你的脚本到 `shortcuts/` 目录
+3. 重启 ProTab: `./protab.command restart`
+
+## 🧪 测试
+
+ProTab 包含完整的测试套件：
+
+```bash
+# 运行所有测试
+make test
+
+# 运行特定测试类型
+make test-swift        # Swift 单元测试
+make test-shell        # Shell 脚本测试
+make test-integration  # 集成测试
+
+# 生成覆盖率报告
+make coverage
+```
+
+## 🔧 开发
+
+### 项目结构
+
+```
+ProTab/
+├── protab.command         # 主控制脚本（双击即可启动）
+├── config.json            # 配置文件
+├── build.sh               # 编译脚本
+├── Makefile               # 构建配置
+│
+├── swift/                 # Swift 源码
+│   ├── ProTabConfig.swift # 配置类
+│   ├── tab_monitor.swift  # 键盘监听器
+│   └── main.swift         # 程序入口
+│
+├── rust/                  # Rust 内存清理器
+│   ├── Cargo.toml
+│   └── src/
+│
+├── shortcuts/             # 快捷键脚本目录
+├── tests/                 # 测试文件
+└── docs/                  # 文档
+```
+
+### 开发工具
+
+```bash
+# 开发者模式（编译并显示配置）
+make dev
+
+# 代码检查
+make lint
+
+# 清理构建文件
+make clean
+
+# 显示项目状态
+make status
+```
+
+### 添加新功能
+
+1. 在 `shortcuts/` 目录创建新脚本
+2. 在配置文件中添加快捷键映射
+3. 编写测试用例
+4. 运行测试确保功能正常
+
+## 🔒 安全性
+
+- **权限控制**: 仅请求必要的辅助功能权限
+- **配置验证**: 自动验证配置文件格式和路径
+- **错误处理**: 完善的错误处理和日志记录
+- **测试保证**: 95%+ 测试覆盖率确保稳定性
+
+## 🛠️ 故障排除
+
+### 常见问题
+
+**Q: 快捷键不响应？**
+A: 检查辅助功能权限是否已授权，运行 `./protab.command status` 查看状态
+
+**Q: 编译失败？**
+A: 确保已安装 Xcode Command Line Tools: `xcode-select --install`
+
+**Q: 配置文件错误？**
+A: 检查 `config.json` 文件格式，确保JSON语法正确
+
+**Q: 脚本执行失败？**
+A: 检查脚本权限和路径，运行 `make test-shell` 验证脚本功能
+
+### 调试模式
+
+```bash
+# 启用调试模式
+export PROTAB_DEBUG=1
+./protab.command start
+
+# 查看详细日志
+./protab.command status
+```
+
+## 📈 性能
+
+- **启动时间**: < 1秒
+- **响应时间**: < 100ms
+- **内存占用**: < 10MB
+- **CPU 使用**: < 1%（空闲时）
+
+## 🤝 贡献指南
+
+1. Fork 本仓库
+2. 创建功能分支: `git checkout -b feature/new-feature`
+3. 提交更改: `git commit -am 'Add new feature'`
+4. 推送到分支: `git push origin feature/new-feature`
+5. 提交 Pull Request
+
+### 开发约定
+
+- 遵循现有代码风格
+- 编写测试用例
+- 更新文档
+- 确保所有测试通过
+
+## 📝 更新日志
+
+### v1.1.0 (2024-12-24)
+- ✅ 重构项目目录结构
+- ✅ Swift/Rust/文档分类存放
+- ✅ 优化构建流程
+
+### v1.0.0 (2024-12-23)
+- ✅ 实现完整的配置管理系统
+- ✅ 建立全面的测试体系
+- ✅ 添加自动化构建和部署
+- ✅ 完善文档和使用指南
+
+## 📄 许可证
+
+MIT License - 详见 [LICENSE](LICENSE) 文件
+
+## 🙏 致谢
+
+- macOS 系统框架支持
+- Swift 和 Bash 社区
+- 所有贡献者和测试用户
+
+---
+
+**ProTab** - 让快捷键成为你的超能力 ⚡

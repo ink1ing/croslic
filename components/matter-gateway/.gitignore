@@ -1,0 +1,18 @@
+# 依赖
+node_modules/
+
+# Matter 敏感凭证 (强制忽略)
+.matter-storage/
+
+# 个人定时计划与配置
+schedule.json
+.env
+
+# Cloudflare 敏感证书与配置
+cert.pem
+*.json
+!package.json
+
+# 系统文件
+.DS_Store
+*.log

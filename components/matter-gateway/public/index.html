@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IT STUDIO 设备控制</title>
+  <style>
+    :root {
+      --bg: #000000;
+      --card: #000000;
+      --accent: #34c759;
+      --text: #ffffff;
+      --muted: rgba(255, 255, 255, 0.42);
+      --line: rgba(255, 255, 255, 0.1);
+      --input: #1c1c1e;
+      --danger: #ff453a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 28px 18px 36px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .page {
+      width: min(1080px, 100%);
+      margin: 0 auto;
+    }
+
+    .repo-link {
+      display: block;
+      width: fit-content;
+      margin: 20px auto 0;
+      color: var(--muted);
+      font-size: 0.76rem;
+      text-align: center;
+      text-decoration: none;
+    }
+
+    .repo-link:hover {
+      color: #ffffff;
+    }
+
+    .page-title {
+      margin: 4px 0 24px;
+      text-align: center;
+      font-size: clamp(1.7rem, 4vw, 2.7rem);
+      line-height: 1.08;
+      font-weight: 700;
+      letter-spacing: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(240px, 1fr));
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .container {
+      background: var(--card);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 36px;
+      padding: 34px 26px 28px;
+      width: 100%;
+      min-height: 444px;
+      text-align: center;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header { margin-bottom: 28px; }
+
+    .icon-box {
+      font-size: 4.7rem;
+      line-height: 1;
+      margin-bottom: 16px;
+      display: inline-block;
+      min-height: 78px;
+    }
+
+    h2 {
+      font-size: 1.22rem;
+      font-weight: 600;
+      margin: 0;
+      letter-spacing: 0;
+      min-height: 30px;
+      overflow-wrap: anywhere;
+    }
+
+    .switch-container {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 30px;
+    }
+
+    .ios-switch {
+      position: relative;
+      display: inline-block;
+      width: 96px;
+      height: 56px;
+      flex-shrink: 0;
+    }
+
+    .ios-switch input { opacity: 0; width: 0; height: 0; }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: #2c2c2e;
+      transition: .25s;
+      border-radius: 64px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 48px;
+      width: 48px;
+      left: 4px;
+      bottom: 4px;
+      background-color: #ffffff;
+      transition: .25s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider { background-color: var(--accent); }
+    input:checked + .slider:before { transform: translateX(40px); }
+    input:disabled + .slider { cursor: not-allowed; opacity: 0.42; }
+
+    .scheduler {
+      border-top: 1px solid var(--line);
+      padding-top: 22px;
+      text-align: left;
+      margin-top: auto;
+    }
+
+    .schedule-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .schedule-title { font-size: 0.88rem; font-weight: 600; opacity: 0.86; }
+
+    .mini-switch {
+      width: 44px;
+      height: 26px;
+    }
+
+    .mini-switch .slider:before {
+      height: 22px;
+      width: 22px;
+      left: 2px;
+      bottom: 2px;
+    }
+
+    .mini-switch input:checked + .slider:before {
+      transform: translateX(18px);
+    }
+
+    .time-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 12px;
+      font-size: 0.84rem;
+      color: var(--muted);
+    }
+
+    .time-picker {
+      background: var(--input);
+      border: none;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.84rem;
+      padding: 5px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      max-width: 118px;
+    }
+
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      border-radius: 36px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .settings-button {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      width: 46px;
+      height: 46px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 50%;
+      background: rgba(28, 28, 30, 0.92);
+      color: #fff;
+      font-size: 1.15rem;
+      cursor: pointer;
+      z-index: 30;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.42);
+      backdrop-filter: blur(18px);
+    }
+
+    .auth-button {
+      position: fixed;
+      left: 18px;
+      bottom: 18px;
+      min-width: 78px;
+      height: 46px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 999px;
+      background: rgba(28, 28, 30, 0.92);
+      color: #fff;
+      font-size: 0.86rem;
+      font-weight: 700;
+      cursor: pointer;
+      z-index: 30;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.42);
+      backdrop-filter: blur(18px);
+    }
+
+    .auth-button.authenticated {
+      color: #74df8c;
+      border-color: rgba(52, 199, 89, 0.26);
+    }
+
+    .auth-panel {
+      width: min(360px, 100%);
+      background: #050505;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 28px;
+      padding: 24px;
+      box-shadow: 0 22px 70px rgba(0, 0, 0, 0.7);
+    }
+
+    .auth-panel h3 {
+      margin: 0 0 16px;
+      font-size: 1.12rem;
+    }
+
+    .auth-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+    }
+
+    .auth-message {
+      min-height: 18px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .auth-message.error { color: var(--danger); }
+
+    .settings-button:active { transform: scale(0.96); }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.72);
+      z-index: 40;
+    }
+
+    .modal.open { display: flex; }
+
+    .settings-panel {
+      width: min(680px, 100%);
+      max-height: min(760px, calc(100vh - 36px));
+      overflow: auto;
+      background: #050505;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 28px;
+      padding: 24px;
+      box-shadow: 0 22px 70px rgba(0, 0, 0, 0.7);
+    }
+
+    .settings-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .settings-top h3 {
+      margin: 0;
+      font-size: 1.14rem;
+      font-weight: 650;
+    }
+
+    .close-btn {
+      width: 34px;
+      height: 34px;
+      border: none;
+      border-radius: 50%;
+      background: var(--input);
+      color: #fff;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+
+    .settings-section {
+      border-top: 1px solid var(--line);
+      padding-top: 18px;
+      margin-top: 18px;
+    }
+
+    .settings-section:first-of-type {
+      border-top: none;
+      margin-top: 0;
+      padding-top: 0;
+    }
+
+    .field-label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    .text-input {
+      width: 100%;
+      min-width: 0;
+      background: var(--input);
+      border: 1px solid transparent;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.92rem;
+      padding: 10px 12px;
+      border-radius: 12px;
+      outline: none;
+    }
+
+    .text-input:focus { border-color: rgba(52, 199, 89, 0.6); }
+
+    .device-settings {
+      display: grid;
+      gap: 14px;
+    }
+
+    .settings-item {
+      border: 1px solid rgba(255, 255, 255, 0.11);
+      border-radius: 18px;
+      padding: 14px;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .settings-item-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .settings-item-name {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.92rem;
+      font-weight: 650;
+      overflow: hidden;
+    }
+
+    .settings-item-name span:last-child {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .status {
+      flex-shrink: 0;
+      font-size: 0.76rem;
+      color: var(--muted);
+    }
+
+    .status.ok { color: var(--accent); }
+    .status.error { color: var(--danger); }
+
+    .settings-fields {
+      display: grid;
+      grid-template-columns: 66px 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .emoji-input {
+      text-align: center;
+      font-size: 1.08rem;
+      padding-left: 8px;
+      padding-right: 8px;
+    }
+
+    .title-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+    }
+
+    .pair-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(112px, 0.7fr) auto;
+      gap: 10px;
+    }
+
+    .settings-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 10px 0;
+    }
+
+    .action-btn,
+    .pair-btn {
+      border: none;
+      border-radius: 12px;
+      background: #ffffff;
+      color: #000000;
+      font-family: inherit;
+      font-size: 0.86rem;
+      font-weight: 700;
+      padding: 0 14px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .action-btn {
+      min-height: 38px;
+    }
+
+    .forget-btn {
+      background: rgba(255, 69, 58, 0.14);
+      color: #ff8a82;
+      border: 1px solid rgba(255, 69, 58, 0.28);
+    }
+
+    .save-btn {
+      background: rgba(52, 199, 89, 0.16);
+      color: #74df8c;
+      border: 1px solid rgba(52, 199, 89, 0.28);
+    }
+
+    .action-btn:disabled,
+    .pair-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 980px) {
+      body {
+        padding-top: 22px;
+        padding-bottom: 82px;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+        max-width: 360px;
+        margin: 0 auto;
+      }
+
+      .container {
+        min-height: 0;
+        padding-top: 32px;
+      }
+
+      .settings-panel {
+        padding: 20px;
+      }
+
+      .settings-actions {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1 class="page-title" id="pageTitle">IT STUDIO 设备控制</h1>
+    <div class="grid" id="deviceGrid"></div>
+    <a class="repo-link" href="https://github.com/silasxbt/matter-gateway" target="_blank" rel="noopener noreferrer">仓库地址：https://github.com/silasxbt/matter-gateway</a>
+  </main>
+
+  <button type="button" class="settings-button" id="settingsOpen" aria-label="打开设置">⚙</button>
+  <button type="button" class="auth-button" id="authOpen">登录</button>
+
+  <div class="modal" id="settingsModal" aria-hidden="true">
+    <section class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <div class="settings-top">
+        <h3 id="settingsTitle">设置</h3>
+        <button type="button" class="close-btn" id="settingsClose" aria-label="关闭设置">×</button>
+      </div>
+
+      <div class="settings-section">
+        <label class="field-label" for="titleInput">页面标题</label>
+        <div class="title-row">
+          <input type="text" id="titleInput" class="text-input" maxlength="32" autocomplete="off" />
+          <button type="button" class="action-btn save-btn" id="titleSave">保存</button>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="device-settings" id="settingsList"></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal" id="authModal" aria-hidden="true">
+    <section class="auth-panel" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+      <h3 id="authTitle">输入控制密码</h3>
+      <div class="auth-row">
+        <input type="password" id="pinInput" class="text-input" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="current-password" placeholder="6 位密码" />
+        <button type="button" class="action-btn save-btn" id="pinSubmit">解锁</button>
+      </div>
+      <div class="auth-message" id="authMessage"></div>
+    </section>
+  </div>
+
+  <template id="deviceTemplate">
+    <section class="container">
+      <div class="loading-overlay" data-loader>
+        <div class="spinner"></div>
+      </div>
+
+      <div class="header">
+        <div class="icon-box" data-icon>💤</div>
+        <h2 data-title>IT 工作室饮水机</h2>
+      </div>
+
+      <div class="switch-container">
+        <label class="ios-switch">
+          <input type="checkbox" data-power>
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="scheduler">
+        <div class="schedule-header">
+          <span class="schedule-title">自动化</span>
+          <label class="ios-switch mini-switch">
+            <input type="checkbox" data-schedule-enabled>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="time-row">
+          <span>通电</span>
+          <input type="time" class="time-picker" data-on-time>
+        </div>
+        <div class="time-row">
+          <span>断电</span>
+          <input type="time" class="time-picker" data-off-time>
+        </div>
+      </div>
+    </section>
+  </template>
+
+  <template id="settingsItemTemplate">
+    <div class="settings-item">
+      <div class="settings-item-head">
+        <div class="settings-item-name">
+          <span data-settings-icon>🚰</span>
+          <span data-settings-title>IT 工作室饮水机</span>
+        </div>
+        <div class="status" data-status>未配对</div>
+      </div>
+      <div class="settings-fields">
+        <input type="text" class="text-input emoji-input" data-emoji maxlength="2" aria-label="设备 Emoji" />
+        <input type="text" class="text-input" data-name maxlength="24" aria-label="设备名称" />
+      </div>
+      <div class="settings-actions">
+        <button type="button" class="action-btn save-btn" data-save-btn>保存设备</button>
+        <button type="button" class="action-btn forget-btn" data-forget-btn>遗忘设备</button>
+      </div>
+      <div class="pair-row">
+        <input type="text" class="text-input" data-pair-code inputmode="numeric" autocomplete="off" placeholder="输入配对码" aria-label="Matter 配对码" />
+        <input type="text" class="text-input" data-pair-ip inputmode="decimal" autocomplete="off" placeholder="设备 IP" aria-label="Matter 设备 IP，可选" />
+        <button type="button" class="pair-btn" data-pair-btn>配对</button>
+      </div>
+    </div>
+  </template>
+
+  <script>
+    const defaults = [
+      { id: 0, name: 'IT 工作室饮水机', emoji: '🚰' },
+      { id: 1, name: '设备 2', emoji: '💡' },
+      { id: 2, name: '设备 3', emoji: '🔌' },
+    ];
+    const state = new Map();
+    const processing = new Set();
+    let appSettings = { title: 'IT STUDIO 设备控制' };
+    let canControl = false;
+    let authExpiresAt = null;
+
+    function deviceFallback(id) {
+      return defaults.find(device => device.id === id) || { id, name: `设备 ${id + 1}`, emoji: '💡' };
+    }
+
+    function createCard(device) {
+      const template = document.getElementById('deviceTemplate');
+      const node = template.content.firstElementChild.cloneNode(true);
+      node.dataset.id = device.id;
+
+      node.querySelector('[data-power]').addEventListener('change', () => toggleDevice(device.id));
+      node.querySelector('[data-schedule-enabled]').addEventListener('change', () => saveSchedule(device.id));
+      node.querySelector('[data-on-time]').addEventListener('change', () => saveSchedule(device.id));
+      node.querySelector('[data-off-time]').addEventListener('change', () => saveSchedule(device.id));
+
+      document.getElementById('deviceGrid').appendChild(node);
+      renderDevice({ ...deviceFallback(device.id), ...device });
+      return node;
+    }
+
+    function createSettingsItem(device) {
+      const template = document.getElementById('settingsItemTemplate');
+      const node = template.content.firstElementChild.cloneNode(true);
+      node.dataset.settingsId = device.id;
+
+      const name = node.querySelector('[data-name]');
+      const emoji = node.querySelector('[data-emoji]');
+      const pairCode = node.querySelector('[data-pair-code]');
+      const pairIp = node.querySelector('[data-pair-ip]');
+      const pairBtn = node.querySelector('[data-pair-btn]');
+      const saveBtn = node.querySelector('[data-save-btn]');
+      const forgetBtn = node.querySelector('[data-forget-btn]');
+
+      saveBtn.addEventListener('click', () => saveConfig(device.id));
+      forgetBtn.addEventListener('click', () => forgetDevice(device.id));
+      pairBtn.addEventListener('click', () => pairDevice(device.id));
+      pairCode.addEventListener('keydown', event => {
+        if (event.key === 'Enter') pairDevice(device.id);
+      });
+      pairIp.addEventListener('keydown', event => {
+        if (event.key === 'Enter') pairDevice(device.id);
+      });
+
+      document.getElementById('settingsList').appendChild(node);
+      renderSettingsItem({ ...deviceFallback(device.id), ...device });
+      return node;
+    }
+
+    function getCard(id) {
+      return document.querySelector(`.container[data-id="${id}"]`);
+    }
+
+    function getSettingsItem(id) {
+      return document.querySelector(`.settings-item[data-settings-id="${id}"]`);
+    }
+
+    function setLoading(id, loading) {
+      const card = getCard(id);
+      const item = getSettingsItem(id);
+      if (card) {
+        card.querySelector('[data-loader]').style.display = loading ? 'flex' : 'none';
+        card.querySelector('[data-power]').disabled = loading || !state.get(id)?.online || !canControl;
+      }
+      if (item) {
+        const paired = !!state.get(id)?.paired;
+        item.querySelector('[data-pair-btn]').disabled = loading || !canControl;
+        item.querySelector('[data-save-btn]').disabled = loading || !canControl;
+        item.querySelector('[data-forget-btn]').disabled = loading || !paired || !canControl;
+      }
+    }
+
+    function setStatus(id, message, type = '') {
+      const item = getSettingsItem(id);
+      if (!item) return;
+      const status = item.querySelector('[data-status]');
+      status.textContent = message;
+      status.className = `status ${type}`.trim();
+    }
+
+    function renderDevice(device) {
+      const card = getCard(device.id);
+      if (!card) return;
+      const cached = state.get(device.id) || {};
+      const next = { ...cached, ...device };
+      state.set(device.id, next);
+
+      const schedule = next.schedule || {};
+      const name = next.name || deviceFallback(next.id).name;
+      const emoji = next.emoji || deviceFallback(next.id).emoji;
+      const isOn = !!next.on;
+
+      card.querySelector('[data-title]').textContent = name;
+      card.querySelector('[data-icon]').textContent = isOn ? emoji : '💤';
+      card.querySelector('[data-power]').checked = isOn;
+      card.querySelector('[data-power]').disabled = !next.online || !canControl;
+      card.querySelector('[data-schedule-enabled]').checked = !!schedule.enabled;
+      card.querySelector('[data-on-time]').value = schedule.onTime || '';
+      card.querySelector('[data-off-time]').value = schedule.offTime || '';
+      card.querySelector('[data-schedule-enabled]').disabled = !canControl;
+      card.querySelector('[data-on-time]').disabled = !canControl;
+      card.querySelector('[data-off-time]').disabled = !canControl;
+      renderSettingsItem(next);
+    }
+
+    function renderSettingsItem(device) {
+      const item = getSettingsItem(device.id);
+      if (!item) return;
+      const name = device.name || deviceFallback(device.id).name;
+      const emoji = device.emoji || deviceFallback(device.id).emoji;
+      const active = document.activeElement;
+      const editingThisItem = item.contains(active) && active.matches('input');
+
+      item.querySelector('[data-settings-icon]').textContent = emoji;
+      item.querySelector('[data-settings-title]').textContent = name;
+      if (!editingThisItem) {
+        item.querySelector('[data-name]').value = name;
+        item.querySelector('[data-emoji]').value = emoji;
+      }
+      item.querySelector('[data-name]').disabled = !canControl;
+      item.querySelector('[data-emoji]').disabled = !canControl;
+      item.querySelector('[data-pair-code]').disabled = !canControl;
+      item.querySelector('[data-pair-ip]').disabled = !canControl;
+      item.querySelector('[data-pair-btn]').disabled = !canControl;
+      item.querySelector('[data-save-btn]').disabled = !canControl;
+
+      if (!device.paired) {
+        setStatus(device.id, '未配对');
+        item.querySelector('[data-forget-btn]').disabled = true;
+      } else if (!device.online) {
+        setStatus(device.id, '已配对，等待连接');
+        item.querySelector('[data-forget-btn]').disabled = !canControl;
+      } else {
+        setStatus(device.id, '已连接', 'ok');
+        item.querySelector('[data-forget-btn]').disabled = !canControl;
+      }
+    }
+
+    function renderSettings(settings) {
+      appSettings = { ...appSettings, ...settings };
+      document.getElementById('pageTitle').textContent = appSettings.title;
+      document.title = appSettings.title;
+      if (document.activeElement !== document.getElementById('titleInput')) {
+        document.getElementById('titleInput').value = appSettings.title;
+      }
+      document.getElementById('titleInput').disabled = !canControl;
+      document.getElementById('titleSave').disabled = !canControl;
+    }
+
+    function renderAuth() {
+      const authButton = document.getElementById('authOpen');
+      authButton.textContent = canControl ? '已解锁' : '登录';
+      authButton.classList.toggle('authenticated', canControl);
+      document.getElementById('titleInput').disabled = !canControl;
+      document.getElementById('titleSave').disabled = !canControl;
+      for (const device of state.values()) renderDevice(device);
+    }
+
+    async function syncAuth() {
+      try {
+        const res = await fetch('/api/auth/status');
+        const data = await res.json();
+        canControl = !!data.authenticated;
+        authExpiresAt = data.expiresAt || null;
+        renderAuth();
+      } catch (e) {
+        canControl = false;
+        authExpiresAt = null;
+        renderAuth();
+      }
+    }
+
+    function openAuth(message = '') {
+      const modal = document.getElementById('authModal');
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden', 'false');
+      document.getElementById('authMessage').textContent = message;
+      document.getElementById('authMessage').className = 'auth-message';
+      document.getElementById('pinInput').focus();
+    }
+
+    function closeAuth() {
+      const modal = document.getElementById('authModal');
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+
+    async function login() {
+      const pinInput = document.getElementById('pinInput');
+      const message = document.getElementById('authMessage');
+      const pin = pinInput.value.trim();
+      if (!/^\d{6}$/.test(pin)) {
+        message.textContent = '请输入 6 位数字密码';
+        message.className = 'auth-message error';
+        return;
+      }
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '登录失败');
+        canControl = true;
+        authExpiresAt = data.expiresAt;
+        pinInput.value = '';
+        closeAuth();
+        renderAuth();
+      } catch (e) {
+        canControl = false;
+        message.textContent = e.message || '登录失败';
+        message.className = 'auth-message error';
+        renderAuth();
+      }
+    }
+
+    async function handleProtectedResponse(res) {
+      if (res.status !== 401) return false;
+      canControl = false;
+      renderAuth();
+      openAuth('需要登录后才能操作');
+      return true;
+    }
+
+    async function syncSettings() {
+      try {
+        const res = await fetch('/api/settings');
+        if (!res.ok) return;
+        renderSettings(await res.json());
+      } catch (e) {
+        console.error('Settings sync failed', e);
+      }
+    }
+
+    async function saveSettings() {
+      const title = document.getElementById('titleInput').value;
+      try {
+        const res = await fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title }),
+        });
+        if (await handleProtectedResponse(res)) return;
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '保存设置失败');
+        renderSettings(data.settings);
+      } catch (e) {
+        console.error(e.message);
+      }
+    }
+
+    async function syncDevices() {
+      try {
+        const res = await fetch('/api/devices');
+        const devices = await res.json();
+        for (const device of devices) {
+          if (!getCard(device.id)) createCard(device);
+          if (!getSettingsItem(device.id)) createSettingsItem(device);
+          renderDevice(device);
+          syncDeviceStatus(device.id);
+        }
+      } catch (e) {
+        console.error('Device sync failed', e);
+      }
+    }
+
+    async function syncDeviceStatus(id) {
+      if (processing.has(id)) return;
+      const current = state.get(id);
+      if (!current?.paired || !current?.online) return;
+      try {
+        const res = await fetch(`/api/device/${id}/status`);
+        if (!res.ok) return;
+        const data = await res.json();
+        renderDevice({ id, on: data.on, schedule: data.schedule });
+      } catch (e) {
+        console.error(`Status sync failed for device ${id}`, e);
+      }
+    }
+
+    async function toggleDevice(id) {
+      if (processing.has(id)) return;
+      processing.add(id);
+      setLoading(id, true);
+      try {
+        const res = await fetch(`/api/device/${id}/toggle`, { method: 'POST' });
+        if (await handleProtectedResponse(res)) return;
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '控制失败');
+        renderDevice({ id, on: data.on, online: true, paired: true });
+      } catch (e) {
+        alert(e.message || '控制失败');
+        syncDeviceStatus(id);
+      } finally {
+        processing.delete(id);
+        setLoading(id, false);
+      }
+    }
+
+    async function saveSchedule(id) {
+      const card = getCard(id);
+      const data = {
+        onTime: card.querySelector('[data-on-time]').value,
+        offTime: card.querySelector('[data-off-time]').value,
+        enabled: card.querySelector('[data-schedule-enabled]').checked,
+      };
+      try {
+        const res = await fetch(`/api/device/${id}/schedule`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        if (await handleProtectedResponse(res)) return;
+        if (!res.ok) throw new Error('保存定时失败');
+        renderDevice({ id, schedule: data });
+      } catch (e) {
+        console.error(e.message);
+      }
+    }
+
+    async function saveConfig(id, options = {}) {
+      const item = getSettingsItem(id);
+      const data = {
+        name: item.querySelector('[data-name]').value,
+        emoji: item.querySelector('[data-emoji]').value,
+      };
+      try {
+        if (!options.silent) setStatus(id, '正在保存...');
+        const res = await fetch(`/api/device/${id}/config`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        if (await handleProtectedResponse(res)) return null;
+        if (!res.ok) throw new Error('保存设备配置失败');
+        renderDevice({ id, ...data });
+        if (!options.silent) setStatus(id, '已保存', 'ok');
+        return data;
+      } catch (e) {
+        if (!options.silent) setStatus(id, e.message || '保存失败', 'error');
+        throw e;
+      }
+    }
+
+    async function forgetDevice(id) {
+      const current = state.get(id);
+      const name = current?.name || deviceFallback(id).name;
+      if (!current?.paired) {
+        setStatus(id, '未配对');
+        return;
+      }
+      if (!confirm(`遗忘「${name}」？`)) return;
+
+      processing.add(id);
+      setLoading(id, true);
+      setStatus(id, '正在遗忘...');
+      try {
+        const res = await fetch(`/api/device/${id}/unpair`, { method: 'POST' });
+        if (await handleProtectedResponse(res)) return;
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '遗忘失败');
+        renderDevice({ id, paired: false, online: false, on: false });
+        setStatus(id, '已遗忘');
+      } catch (e) {
+        setStatus(id, e.message || '遗忘失败', 'error');
+      } finally {
+        processing.delete(id);
+        setLoading(id, false);
+      }
+    }
+
+    async function pairDevice(id) {
+      const item = getSettingsItem(id);
+      const pairingCode = item.querySelector('[data-pair-code]').value.trim();
+      const targetIp = item.querySelector('[data-pair-ip]').value.trim();
+      if (!pairingCode) {
+        setStatus(id, '请输入配对码', 'error');
+        return;
+      }
+
+      processing.add(id);
+      setLoading(id, true);
+      setStatus(id, '正在配对...');
+      const previousDevice = state.get(id) || {};
+
+      try {
+        const savedConfig = await saveConfig(id, { silent: true });
+        renderDevice({ id, ...previousDevice, ...savedConfig });
+        setStatus(id, targetIp ? `正在连接 ${targetIp}...` : '正在发现设备...');
+        const res = await fetch(`/api/device/${id}/pair`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pairingCode, targetIp }),
+        });
+        if (await handleProtectedResponse(res)) return;
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '配对失败');
+        item.querySelector('[data-pair-code]').value = '';
+        item.querySelector('[data-pair-ip]').value = '';
+        renderDevice({ id, paired: true, online: true });
+        setStatus(id, '配对成功', 'ok');
+        syncDeviceStatus(id);
+      } catch (e) {
+        setStatus(id, e.message || '配对失败', 'error');
+      } finally {
+        processing.delete(id);
+        setLoading(id, false);
+      }
+    }
+
+    function openSettings() {
+      const modal = document.getElementById('settingsModal');
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden', 'false');
+      document.getElementById('titleInput').focus();
+    }
+
+    function closeSettings() {
+      const modal = document.getElementById('settingsModal');
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+
+    document.getElementById('settingsOpen').addEventListener('click', openSettings);
+    document.getElementById('authOpen').addEventListener('click', () => openAuth(authExpiresAt ? `已解锁至 ${new Date(authExpiresAt).toLocaleString('zh-CN')}` : ''));
+    document.getElementById('pinSubmit').addEventListener('click', login);
+    document.getElementById('pinInput').addEventListener('keydown', event => {
+      if (event.key === 'Enter') login();
+    });
+    document.getElementById('settingsClose').addEventListener('click', closeSettings);
+    document.getElementById('settingsModal').addEventListener('click', event => {
+      if (event.target.id === 'settingsModal') closeSettings();
+    });
+    document.getElementById('authModal').addEventListener('click', event => {
+      if (event.target.id === 'authModal') closeAuth();
+    });
+    document.getElementById('titleSave').addEventListener('click', saveSettings);
+    document.getElementById('titleInput').addEventListener('keydown', event => {
+      if (event.key === 'Enter') saveSettings();
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') closeSettings();
+    });
+
+    defaults.forEach(device => {
+      createCard(device);
+      createSettingsItem(device);
+    });
+    syncAuth();
+    syncSettings();
+    syncDevices();
+    setInterval(() => {
+      syncAuth();
+      syncSettings();
+      syncDevices();
+    }, 5000);
+  </script>
+</body>
+</html>

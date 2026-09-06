@@ -1,0 +1,52 @@
+import XCTest
+@testable import MacEfficiencyHub
+
+final class MacEfficiencyHubTests: XCTestCase {
+    func testRedactionDoesNotExposeSensitiveValue() {
+        let line = "api_key = \"secret-value\""
+        let result = ConfigurationService.redact(line)
+        XCTAssertFalse(result.contains("secret-value"))
+        XCTAssertTrue(result.contains("已设置"))
+    }
+
+    func testRedactionLeavesOrdinaryValuesUntouched() {
+        XCTAssertEqual(ConfigurationService.redact("timeout = 30"), "timeout = 30")
+    }
+
+    func testProcessRunnerCapturesOutput() throws {
+        let result = try ProcessRunner.run(executable: "/usr/bin/printf", arguments: ["hub-test"])
+        XCTAssertEqual(result.status, 0)
+        XCTAssertEqual(result.output, "hub-test")
+    }
+
+    func testInvalidGitHubRepositoryIsRejected() async {
+        do {
+            _ = try await UpdateService.latestRelease(repository: "not a repository")
+            XCTFail("Expected invalid repository error")
+        } catch {
+            XCTAssertEqual(error.localizedDescription, "GitHub 仓库格式应为 owner/repository")
+        }
+    }
+
+    func testReleaseVersionComparisonUsesNumericComponents() {
+        XCTAssertTrue(UpdateService.versionIsNewer("v1.10.0", than: "1.9.9"))
+        XCTAssertTrue(UpdateService.versionIsNewer("2.0", than: "1.99.99"))
+        XCTAssertFalse(UpdateService.versionIsNewer("v1.0.0", than: "1.0.0"))
+        XCTAssertFalse(UpdateService.versionIsNewer("preview", than: "1.0.0"))
+    }
+
+    @MainActor
+    func testDiagnosticMarkdownExportsToPDF() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("MacEfficiencyHub-PDF-Test-\(UUID().uuidString)", isDirectory: true)
+        let markdown = directory.appendingPathComponent("report.md")
+        let pdf = directory.appendingPathComponent("report.pdf")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        try "# Mac 诊断\n\n- 存储状态正常\n- 电池状态正常\n".write(to: markdown, atomically: true, encoding: .utf8)
+        try DiagnosticReportExporter.exportPDF(markdownAt: markdown, to: pdf)
+
+        XCTAssertTrue(FileManager.default.fileExists(atPath: pdf.path))
+        XCTAssertGreaterThan(try Data(contentsOf: pdf).count, 1_000)
+    }
+}
