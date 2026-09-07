@@ -6,25 +6,62 @@ import SwiftUI
 
 @main
 struct MacEfficiencyHubApp: App {
-    @StateObject private var model = HubModel()
-    @StateObject private var store = UserStore()
-    @StateObject private var matter = MatterGatewayController()
-    @StateObject private var tunnel = TunnelController()
-    @StateObject private var updater = UpdateController()
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {
-        MenuBarExtra {
-            MenuPanel(model: model, store: store, updater: updater)
-        } label: {
-            Image(systemName: "bolt.horizontal.circle.fill")
+        Settings {
+            Color.clear.frame(width: 1, height: 1)
         }
-        .menuBarExtraStyle(.window)
+    }
+}
 
-        Window("Mac Efficiency Hub", id: "settings") {
-            SettingsView(model: model, store: store, matter: matter, tunnel: tunnel, updater: updater)
-                .frame(minWidth: 520, minHeight: 700)
+@MainActor
+final class AppDependencies: ObservableObject {
+    static let shared = AppDependencies()
+
+    let model = HubModel()
+    let store = UserStore()
+    let matter = MatterGatewayController()
+    let tunnel = TunnelController()
+    let updater = UpdateController()
+}
+
+@MainActor
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    private let dependencies = AppDependencies.shared
+    private var statusItem: NSStatusItem?
+    private var panelWindow: NSWindow?
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        item.button?.image = NSImage(systemSymbolName: "bolt.horizontal.circle.fill", accessibilityDescription: "Mac Efficiency Hub")
+        item.button?.target = self
+        item.button?.action = #selector(showMainPanel)
+        statusItem = item
+    }
+
+    @objc private func showMainPanel() {
+        if panelWindow == nil {
+            let rootView = SettingsView(
+                model: dependencies.model,
+                store: dependencies.store,
+                matter: dependencies.matter,
+                tunnel: dependencies.tunnel,
+                updater: dependencies.updater
+            )
+            let hostingController = NSHostingController(rootView: rootView)
+            let window = NSWindow(contentViewController: hostingController)
+            window.title = "Mac Efficiency Hub"
+            window.setContentSize(NSSize(width: 560, height: 820))
+            window.minSize = NSSize(width: 520, height: 700)
+            window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+            window.isReleasedWhenClosed = false
+            window.center()
+            panelWindow = window
         }
-        .defaultSize(width: 560, height: 820)
+
+        NSApp.activate(ignoringOtherApps: true)
+        panelWindow?.makeKeyAndOrderFront(nil)
     }
 }
 
@@ -600,58 +637,6 @@ private final class NetworkProbeResults: @unchecked Sendable {
     func snapshot() -> [(Bool, Int)] {
         lock.lock(); defer { lock.unlock() }
         return values
-    }
-}
-
-struct MenuPanel: View {
-    @ObservedObject var model: HubModel
-    @ObservedObject var store: UserStore
-    @ObservedObject var updater: UpdateController
-    @Environment(\.openWindow) private var openWindow
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Label("Mac Efficiency Hub", systemImage: "bolt.horizontal.circle.fill").font(.headline)
-                Spacer()
-                Button { openWindow(id: "settings") } label: { Image(systemName: "gearshape") }.buttonStyle(.borderless).help("打开控制面板")
-            }
-            Divider()
-            GroupBox("网络") {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(model.network.status).font(.headline)
-                    Text(model.network.detail).font(.caption).foregroundStyle(.secondary)
-                    HStack {
-                        if let latency = model.network.latency { Text("\(latency) ms").font(.caption2) }
-                        Spacer()
-                        if let site = store.pinnedSites.first { Button(site.label) { model.testPinnedSite(site.url) } }
-                    }
-                }.frame(maxWidth: .infinity, alignment: .leading)
-            }
-            GroupBox("货币换算") {
-                VStack(spacing: 8) {
-                    HStack { TextField("金额", text: $model.amount).textFieldStyle(.roundedBorder); Picker("源", selection: $model.fromCurrency) { ForEach(model.currencies, id: \.self) { Text($0) } }.labelsHidden(); Image(systemName: "arrow.right"); Picker("目标", selection: $model.toCurrency) { ForEach(model.currencies, id: \.self) { Text($0) } }.labelsHidden() }
-                    HStack { Text(model.conversion.isEmpty ? "输入金额后换算" : model.conversion).font(.caption); Spacer(); Button("换算") { model.convertCurrency() } }
-                }
-            }
-            HStack {
-                Button { openWindow(id: "settings") } label: { Label("yt-dlp", systemImage: "arrow.down.circle") }
-                Button { model.refreshMemoryMeter() } label: { Label("内存", systemImage: "memorychip") }
-                Button { model.runDiagnostic() } label: { Label(model.isRunningDiagnostic ? "诊断中…" : "Mac 诊断", systemImage: "stethoscope") }.disabled(model.isRunningDiagnostic)
-            }
-            if !store.actions.isEmpty {
-                Divider(); Text("自定义动作").font(.caption).foregroundStyle(.secondary)
-                ForEach(store.actions.prefix(4)) { action in Button(action.name) { model.runAction(action) } }
-            }
-            if !model.lastAction.isEmpty { Text(model.lastAction).font(.caption2).foregroundStyle(.secondary) }
-            Divider()
-            HStack {
-                Button("退出") { NSApplication.shared.terminate(nil) }.keyboardShortcut("q")
-                if updater.hasUpdate { Button("更新") { updater.installAvailableUpdate() } }
-            }
-        }
-        .padding(16).frame(width: 470)
-        .alert("工具输出", isPresented: Binding(get: { !model.toolOutput.isEmpty }, set: { if !$0 { model.toolOutput = "" } })) { Button("关闭", role: .cancel) { model.toolOutput = "" } } message: { Text(model.toolOutput.prefix(3200)) }
     }
 }
 
