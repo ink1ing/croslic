@@ -1,6 +1,7 @@
 import Foundation
 
 struct HubAction: Codable, Identifiable, Sendable { var id = UUID(); var name: String; var command: String; var arguments: [String] = []; var shortcutKey: String? = nil }
+struct ScriptShortcut: Codable, Identifiable, Sendable { var id = UUID(); var name: String; var path: String }
 struct PromptItem: Codable, Identifiable, Sendable { var id = UUID(); var title: String; var body: String }
 struct PinnedSite: Codable, Identifiable, Sendable { var id = UUID(); var label: String; var url: String }
 struct LabeledPreset: Codable, Identifiable, Sendable { var id = UUID(); var label: String; var note: String; var prompt: String }
@@ -125,6 +126,7 @@ struct HubSettings: Codable, Sendable {
 @MainActor
 final class UserStore: ObservableObject {
     @Published var actions: [HubAction] = []
+    @Published var scripts: [ScriptShortcut] = []
     @Published var prompts: [PromptItem] = []
     @Published var pinnedSites: [PinnedSite] = []
     @Published var calendarPresets: [LabeledPreset] = []
@@ -137,6 +139,7 @@ final class UserStore: ObservableObject {
         directory = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/MacEfficiencyHub")
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         actions = load([HubAction].self, name: "actions.json") ?? []
+        scripts = load([ScriptShortcut].self, name: "scripts.json") ?? []
         prompts = load([PromptItem].self, name: "prompts.json") ?? []
         pinnedSites = load([PinnedSite].self, name: "pinned-sites.json") ?? []
         calendarPresets = load([LabeledPreset].self, name: "calendar-presets.json") ?? []
@@ -147,6 +150,7 @@ final class UserStore: ObservableObject {
     }
     func save() {
         save(actions, name: "actions.json")
+        save(scripts, name: "scripts.json")
         save(prompts, name: "prompts.json")
         save(pinnedSites, name: "pinned-sites.json")
         save(calendarPresets, name: "calendar-presets.json")

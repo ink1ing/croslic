@@ -3,6 +3,7 @@ import Foundation
 import Network
 import SafariServices
 import SwiftUI
+import UniformTypeIdentifiers
 
 @main
 struct MacEfficiencyHubApp: App {
@@ -38,6 +39,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         item.button?.target = self
         item.button?.action = #selector(showMainPanel)
         statusItem = item
+
+        let store = dependencies.store
+        dependencies.model.configureShortcuts(
+            enabled: store.settings.globalShortcutsEnabled,
+            shortcutKey: store.settings.tabShortcutKey,
+            target: store.settings.tabShortcutTarget,
+            actions: store.actions,
+            scripts: store.scripts,
+            pinnedSites: store.pinnedSites,
+            codexSystemPrompt: store.systemPrompts.codex,
+            claudeSystemPrompt: store.systemPrompts.claude
+        )
     }
 
     @objc private func showMainPanel() {
@@ -309,6 +322,17 @@ final class HubModel: ObservableObject {
         }
     }
 
+    func runScriptShortcut(_ script: ScriptShortcut) {
+        let path = script.path.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard path.hasPrefix("/"), FileManager.default.fileExists(atPath: path) else {
+            lastAction = "脚本文件不存在：\(script.name)"
+            return
+        }
+        let quotedPath = Self.shellString(path)
+        let command = "if [[ -x \(quotedPath) ]]; then \(quotedPath); else /bin/zsh \(quotedPath); fi"
+        runInNewTerminal(command)
+    }
+
     private func runUtility(_ executable: String, arguments: [String], success: String, timeout: TimeInterval = 30) {
         lastAction = "正在执行：\(success)"
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -452,22 +476,28 @@ final class HubModel: ObservableObject {
         }
     }
 
-    func configureShortcuts(enabled: Bool, shortcutKey: String, target: String, actions: [HubAction], pinnedSites: [PinnedSite], codexSystemPrompt: String = "", claudeSystemPrompt: String = "") {
+    func configureShortcuts(enabled: Bool, shortcutKey: String, target: String, actions: [HubAction], scripts: [ScriptShortcut], pinnedSites: [PinnedSite], codexSystemPrompt: String = "", claudeSystemPrompt: String = "") {
         guard enabled else { shortcutMonitor.stop(); lastAction = "全局 Tab 快捷键已关闭"; return }
         let configuredKey = Self.shortcutKey(shortcutKey)
         guard !configuredKey.isEmpty else { shortcutMonitor.stop(); lastAction = "请输入 Tab 后的一个字母"; return }
         shortcutMonitor.actionHandler = { [weak self] pressedKey in
             guard pressedKey == configuredKey else { return }
-            self?.runTabTarget(target, actions: actions, pinnedSites: pinnedSites, codexSystemPrompt: codexSystemPrompt, claudeSystemPrompt: claudeSystemPrompt)
+            self?.runTabTarget(target, actions: actions, scripts: scripts, pinnedSites: pinnedSites, codexSystemPrompt: codexSystemPrompt, claudeSystemPrompt: claudeSystemPrompt)
         }
         lastAction = shortcutMonitor.start() ? "全局 Tab 快捷键已启用" : "无法监听全局按键，请在系统设置授予辅助功能权限"
     }
 
-    private func runTabTarget(_ target: String, actions: [HubAction], pinnedSites: [PinnedSite], codexSystemPrompt: String, claudeSystemPrompt: String) {
+    private func runTabTarget(_ target: String, actions: [HubAction], scripts: [ScriptShortcut], pinnedSites: [PinnedSite], codexSystemPrompt: String, claudeSystemPrompt: String) {
         if target.hasPrefix("action:"),
            let id = UUID(uuidString: String(target.dropFirst("action:".count))),
            let action = actions.first(where: { $0.id == id }) {
             runAction(action)
+            return
+        }
+        if target.hasPrefix("script:"),
+           let id = UUID(uuidString: String(target.dropFirst("script:".count))),
+           let script = scripts.first(where: { $0.id == id }) {
+            runScriptShortcut(script)
             return
         }
         guard let builtIn = TabShortcutTarget(rawValue: target) else {
@@ -567,6 +597,10 @@ final class HubModel: ObservableObject {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard trimmed.count == 1, trimmed.unicodeScalars.allSatisfy({ CharacterSet.letters.contains($0) }) else { return "" }
         return trimmed
+    }
+
+    private static func shellString(_ value: String) -> String {
+        "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'"
     }
 
 }
@@ -845,7 +879,7 @@ struct DashboardView: View {
         .onAppear {
             model.refreshMemoryMeter()
             model.checkYTDLP()
-            model.configureShortcuts(enabled: store.settings.globalShortcutsEnabled, shortcutKey: store.settings.tabShortcutKey, target: store.settings.tabShortcutTarget, actions: store.actions, pinnedSites: store.pinnedSites, codexSystemPrompt: store.systemPrompts.codex, claudeSystemPrompt: store.systemPrompts.claude)
+            model.configureShortcuts(enabled: store.settings.globalShortcutsEnabled, shortcutKey: store.settings.tabShortcutKey, target: store.settings.tabShortcutTarget, actions: store.actions, scripts: store.scripts, pinnedSites: store.pinnedSites, codexSystemPrompt: store.systemPrompts.codex, claudeSystemPrompt: store.systemPrompts.claude)
             updater.check(repository: store.settings.githubRepository)
         }
     }
@@ -899,6 +933,8 @@ struct AutomationView: View {
     @State private var actionName = ""
     @State private var actionPath = ""
     @State private var actionArguments = ""
+    @State private var scriptName = ""
+    @State private var scriptPath = ""
     @State private var isEnabled = false
     @State private var key = ""
     @State private var target = TabShortcutTarget.panel.rawValue
@@ -933,6 +969,37 @@ struct AutomationView: View {
                     }
                 }
             }
+            HStack(alignment: .center, spacing: 8) {
+                Text("脚本快捷键")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                TextField("脚本标签", text: $scriptName)
+                    .frame(width: 110)
+                Text(scriptPath.isEmpty ? "未选择脚本" : scriptPath)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .frame(maxWidth: 220, alignment: .leading)
+                Button("选择 .command / .sh") { chooseScript() }
+                Button { addScript() } label: { Image(systemName: "plus") }
+                    .help("添加脚本快捷键")
+                    .disabled(scriptName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !isScriptPath(scriptPath))
+            }
+            if !store.scripts.isEmpty {
+                HStack(spacing: 6) {
+                    ForEach(store.scripts) { script in
+                        HStack(spacing: 3) {
+                            Button(script.name) { model.runScriptShortcut(script) }
+                            Button { removeScript(script) } label: {
+                                Image(systemName: "xmark")
+                            }
+                            .buttonStyle(.borderless)
+                            .help("删除脚本快捷键")
+                        }
+                    }
+                }
+            }
             Divider()
             HStack(spacing: 8) {
                 Text("启用该功能")
@@ -950,6 +1017,12 @@ struct AutomationView: View {
                         Divider()
                         ForEach(store.actions) { action in
                             Text("命令：\(action.name)").tag("action:\(action.id.uuidString)")
+                        }
+                    }
+                    if !store.scripts.isEmpty {
+                        Divider()
+                        ForEach(store.scripts) { script in
+                            Text("脚本：\(script.name)").tag("script:\(script.id.uuidString)")
                         }
                     }
                 }
@@ -983,12 +1056,61 @@ struct AutomationView: View {
         actionArguments = ""
     }
 
+    private func chooseScript() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [
+            UTType(filenameExtension: "command") ?? .shellScript,
+            .shellScript
+        ]
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        scriptPath = url.path
+        if scriptName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            scriptName = url.deletingPathExtension().lastPathComponent
+        }
+    }
+
+    private func addScript() {
+        let name = scriptName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let path = scriptPath.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, isScriptPath(path) else { return }
+        store.scripts.append(ScriptShortcut(name: name, path: path))
+        store.save()
+        scriptName = ""
+        scriptPath = ""
+        reconfigureShortcuts()
+    }
+
     private func removeAction(_ action: HubAction) {
         store.actions.removeAll { $0.id == action.id }
         if target == "action:\(action.id.uuidString)" {
             target = TabShortcutTarget.panel.rawValue
+            store.settings.tabShortcutTarget = target
         }
         store.save()
+        reconfigureShortcuts()
+    }
+
+    private func removeScript(_ script: ScriptShortcut) {
+        store.scripts.removeAll { $0.id == script.id }
+        if target == "script:\(script.id.uuidString)" {
+            target = TabShortcutTarget.panel.rawValue
+            store.settings.tabShortcutTarget = target
+        }
+        store.save()
+        reconfigureShortcuts()
+    }
+
+    private func isScriptPath(_ path: String) -> Bool {
+        let url = URL(fileURLWithPath: path)
+        let extensionName = url.pathExtension.lowercased()
+        return path.hasPrefix("/") && ["command", "sh"].contains(extensionName) && FileManager.default.isReadableFile(atPath: path)
+    }
+
+    private func reconfigureShortcuts() {
+        model.configureShortcuts(enabled: store.settings.globalShortcutsEnabled, shortcutKey: store.settings.tabShortcutKey, target: store.settings.tabShortcutTarget, actions: store.actions, scripts: store.scripts, pinnedSites: store.pinnedSites, codexSystemPrompt: store.systemPrompts.codex, claudeSystemPrompt: store.systemPrompts.claude)
     }
 
     private func save() {
@@ -1001,7 +1123,7 @@ struct AutomationView: View {
         store.settings.tabShortcutKey = normalizedKey
         store.settings.tabShortcutTarget = target
         store.save()
-        model.configureShortcuts(enabled: isEnabled, shortcutKey: normalizedKey, target: target, actions: store.actions, pinnedSites: store.pinnedSites, codexSystemPrompt: store.systemPrompts.codex, claudeSystemPrompt: store.systemPrompts.claude)
+        model.configureShortcuts(enabled: isEnabled, shortcutKey: normalizedKey, target: target, actions: store.actions, scripts: store.scripts, pinnedSites: store.pinnedSites, codexSystemPrompt: store.systemPrompts.codex, claudeSystemPrompt: store.systemPrompts.claude)
         status = isEnabled ? "已保存：Tab + \(normalizedKey.uppercased())" : "已保存并关闭"
     }
 }
@@ -1227,7 +1349,7 @@ struct ConfigurationView: View {
 
     private func reconfigureShortcuts() {
         store.save()
-        model.configureShortcuts(enabled: store.settings.globalShortcutsEnabled, shortcutKey: store.settings.tabShortcutKey, target: store.settings.tabShortcutTarget, actions: store.actions, pinnedSites: store.pinnedSites, codexSystemPrompt: store.systemPrompts.codex, claudeSystemPrompt: store.systemPrompts.claude)
+        model.configureShortcuts(enabled: store.settings.globalShortcutsEnabled, shortcutKey: store.settings.tabShortcutKey, target: store.settings.tabShortcutTarget, actions: store.actions, scripts: store.scripts, pinnedSites: store.pinnedSites, codexSystemPrompt: store.systemPrompts.codex, claudeSystemPrompt: store.systemPrompts.claude)
     }
 }
 

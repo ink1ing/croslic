@@ -43,6 +43,15 @@ final class MacEfficiencyHubTests: XCTestCase {
         XCTAssertTrue(routes.contains { $0.prefix == "cg" && $0.label == "Coinglass" })
     }
 
+    func testScriptShortcutRoundTripsItsGlobalPath() throws {
+        let shortcut = ScriptShortcut(name: "日常任务", path: "/Users/test/My Scripts/daily.command")
+        let decoded = try JSONDecoder().decode(ScriptShortcut.self, from: JSONEncoder().encode(shortcut))
+
+        XCTAssertEqual(decoded.id, shortcut.id)
+        XCTAssertEqual(decoded.name, shortcut.name)
+        XCTAssertEqual(decoded.path, shortcut.path)
+    }
+
     @MainActor
     func testDiagnosticMarkdownExportsToPDF() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("MacEfficiencyHub-PDF-Test-\(UUID().uuidString)", isDirectory: true)
