@@ -96,7 +96,7 @@ struct HubSettings: Codable, Sendable {
     var globalShortcutsEnabled = false
     var matterEnabled = false
     var matterRemoteEnabled = false
-    var githubRepository = ""
+    var githubRepository = "silasxbt/machub"
     var codexShortcutKey = ""
     var claudeShortcutKey = ""
     var tabShortcutKey = ""
@@ -115,7 +115,8 @@ struct HubSettings: Codable, Sendable {
         globalShortcutsEnabled = try values.decodeIfPresent(Bool.self, forKey: .globalShortcutsEnabled) ?? false
         matterEnabled = try values.decodeIfPresent(Bool.self, forKey: .matterEnabled) ?? false
         matterRemoteEnabled = try values.decodeIfPresent(Bool.self, forKey: .matterRemoteEnabled) ?? false
-        githubRepository = try values.decodeIfPresent(String.self, forKey: .githubRepository) ?? ""
+        let savedRepository = try values.decodeIfPresent(String.self, forKey: .githubRepository) ?? ""
+        githubRepository = savedRepository.isEmpty || savedRepository == "silasxbt/macpad" ? "silasxbt/machub" : savedRepository
         codexShortcutKey = try values.decodeIfPresent(String.self, forKey: .codexShortcutKey) ?? ""
         claudeShortcutKey = try values.decodeIfPresent(String.self, forKey: .claudeShortcutKey) ?? ""
         tabShortcutKey = try values.decodeIfPresent(String.self, forKey: .tabShortcutKey) ?? ""

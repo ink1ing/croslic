@@ -47,7 +47,7 @@ DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer swift test
 zsh Scripts/build-app.sh
 ```
 
-输出位于 `Distribution/build/`，使用本机临时 ad-hoc 签名。对外分发前应使用 Developer ID 签名与公证。发布 GitHub Release 时，上传名为 `Mac-Efficiency-Hub.zip` 的归档；在统一控制台的“CLI 配置与发布仓库”中填写 `owner/repository`，应用会在检测到较新版本时显示更新按钮。
+输出位于 `Distribution/build/`，使用本机临时 ad-hoc 签名。对外分发前应使用 Developer ID 签名与公证。发布 GitHub Release 时，上传名为 `Mac-Efficiency-Hub.zip` 的归档；默认更新仓库是 `silasxbt/machub`，应用会在检测到较新版本时显示更新按钮。
 
 ## 权限与安全
 

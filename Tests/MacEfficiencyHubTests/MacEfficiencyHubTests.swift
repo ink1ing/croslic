@@ -52,6 +52,14 @@ final class MacEfficiencyHubTests: XCTestCase {
         XCTAssertEqual(decoded.path, shortcut.path)
     }
 
+    func testLegacyRepositoryMigratesToMachub() throws {
+        let data = #"{"githubRepository":"silasxbt/macpad"}"#.data(using: .utf8)!
+        let settings = try JSONDecoder().decode(HubSettings.self, from: data)
+
+        XCTAssertEqual(settings.githubRepository, "silasxbt/machub")
+        XCTAssertEqual(HubSettings().githubRepository, "silasxbt/machub")
+    }
+
     @MainActor
     func testDiagnosticMarkdownExportsToPDF() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("MacEfficiencyHub-PDF-Test-\(UUID().uuidString)", isDirectory: true)
